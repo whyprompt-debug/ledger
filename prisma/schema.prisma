@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Employee {
+  id        String   @id @default(cuid())
+  name      String
+  salary    Float
+  joinDate  DateTime @default(now())
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  salaries  Salary[]
+  loans     Loan[]
+}
+
+model Partner {
+  id        String   @id @default(cuid())
+  name      String
+  sharePercentage Float @default(20)
+  joinDate  DateTime @default(now())
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  salaries  PartnerSalary[]
+  loans     PartnerLoan[]
+  distributions ProfitDistribution[]
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  category    String
+  description String
+  amount      Float
+  isRecurring Boolean  @default(false)
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CashEntry {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  type        String   // INFLOW | OUTFLOW
+  description String
+  amount      Float
+  category    String   @default("general")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  contactInfo String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  expenses    Expense[]
+  revenues    ClientRevenue[]
+}
+
+model ClientRevenue {
+  id       String @id @default(cuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  month    Int
+  year     Int
+  amount   Float
+  notes    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Salary {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  month      Int
+  year       Int
+  amount     Float
+  paidDate   DateTime?
+  isPaid     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model PartnerSalary {
+  id        String   @id @default(cuid())
+  partnerId String
+  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  month     Int
+  year      Int
+  amount    Float
+  paidDate  DateTime?
+  isPaid    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Loan {
+  id           String   @id @default(cuid())
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  amount       Float
+  date         DateTime @default(now())
+  purpose      String?
+  repayments   LoanRepayment[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PartnerLoan {
+  id          String   @id @default(cuid())
+  partnerId   String
+  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  amount      Float
+  date        DateTime @default(now())
+  purpose     String?
+  repayments  PartnerLoanRepayment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LoanRepayment {
+  id        String   @id @default(cuid())
+  loanId    String
+  loan      Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  amount    Float
+  date      DateTime @default(now())
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model PartnerLoanRepayment {
+  id        String      @id @default(cuid())
+  loanId    String
+  loan      PartnerLoan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  amount    Float
+  date      DateTime    @default(now())
+  notes     String?
+  createdAt DateTime    @default(now())
+}
+
+model MonthlyClose {
+  id             String   @id @default(cuid())
+  month          Int
+  year           Int
+  totalRevenue   Float    @default(0)
+  totalExpenses  Float    @default(0)
+  totalSalaries  Float    @default(0)
+  netProfit      Float    @default(0)
+  partnersShare  Float    @default(0)
+  companyShare   Float    @default(0)
+  zakatShare     Float    @default(0)
+  isClosed       Boolean  @default(false)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  distributions  ProfitDistribution[]
+
+  @@unique([month, year])
+}
+
+model ProfitDistribution {
+  id             String       @id @default(cuid())
+  monthlyCloseId String
+  monthlyClose   MonthlyClose @relation(fields: [monthlyCloseId], references: [id], onDelete: Cascade)
+  partnerId      String
+  partner        Partner      @relation(fields: [partnerId], references: [id])
+  amount         Float
+  createdAt      DateTime     @default(now())
+}
